@@ -3,7 +3,6 @@ on:
   push:
     branches:
       - 'master'
-      - 'appset-riskified'
   pull_request:
     branches:
       - 'master'
