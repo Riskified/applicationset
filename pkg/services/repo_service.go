@@ -88,7 +88,10 @@ func (a *argoCDService) GetDirectories(ctx context.Context, repoURL string, revi
 	}
 
 	filteredPaths := []string{}
+	valueFilteredPaths := []string{}
 
+	// Check if VALUE_ENV_FILTER exists and get its value
+	valueEnvFilter, present := os.LookupEnv("VALUE_ENV_FILTER")
 	repoRoot := gitRepoClient.Root()
 
 	if err := filepath.Walk(repoRoot, func(path string, info os.FileInfo, fnErr error) error {
@@ -119,9 +122,28 @@ func (a *argoCDService) GetDirectories(ctx context.Context, repoURL string, revi
 	}); err != nil {
 		return nil, err
 	}
+	if !present {
+		return filteredPaths, nil
+	} else {
+		for _, dir := range filteredPaths {
+			repoDirRoot := repoRoot + "/" + dir
 
-	return filteredPaths, nil
-
+			if err := filepath.Walk(repoDirRoot, func(path string, info os.FileInfo, fnErr error) error {
+				if fnErr != nil {
+					return fnErr
+				}
+				vname := info.Name()
+				// Checking if in the folder there is a file with the name of VALUE_ENV_FILTER
+				if vname == valueEnvFilter {
+					valueFilteredPaths = append(valueFilteredPaths, dir)
+				}
+				return nil
+			}); err != nil {
+				return nil, err
+			}
+		}
+		return valueFilteredPaths, nil
+	}
 }
 
 func (a *argoCDService) GetFileContent(ctx context.Context, repoURL string, revision string, path string) ([]byte, error) {
